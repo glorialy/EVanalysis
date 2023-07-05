@@ -1,42 +1,258 @@
 <!DOCTYPE html>
-<div id="container"></div>
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script type="module">
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <link href='https://fonts.googleapis.com/css?family=Lato:300,900' rel='stylesheet' type='text/css'>
 
-// Declare the chart dimensions and margins.
-const width = 640;
-const height = 400;
-const marginTop = 20;
-const marginRight = 20;
-const marginBottom = 30;
-const marginLeft = 40;
+    <style>
+     body{
+        background-color: whitesmoke;
+     }
 
-// Declare the x (horizontal position) scale.
-const x = d3.scaleUtc()
-    .domain([new Date("2023-01-01"), new Date("2024-01-01")])
-    .range([marginLeft, width - marginRight]);
+    :root {
+      --line-chart-color: #607D8B;
+      --annotation-context-color: #546E7A;
+      --annotation-badge-color:white;
+      --annotation-color: #E8336D;
+    }
 
-// Declare the y (vertical position) scale.
-const y = d3.scaleLinear()
-    .domain([0, 100])
-    .range([height - marginBottom, marginTop]);
+     svg {
+        background-color: white;
+        font-family: 'Lato';
+     }
 
-// Create the SVG container.
-const svg = d3.create("svg")
-    .attr("width", width)
-    .attr("height", height);
+     .axis, .axis text {
+       fill: var(--line-chart-color);
+     }
 
-// Add the x-axis.
-svg.append("g")
-    .attr("transform", `translate(0,${height - marginBottom})`)
-    .call(d3.axisBottom(x));
+     .axis line, path {
+      stroke: var(--line-chart-color);
+     }
 
-// Add the y-axis.
-svg.append("g")
-    .attr("transform", `translate(${marginLeft},0)`)
-    .call(d3.axisLeft(y));
+     path {
+       fill: none;
+     }
 
-// Append the SVG element.
-container.append(svg.node());
+    .annotation path {
+      stroke: var(--annotation-badge-color);
+    }
 
-</script>
+    .annotation:not(.above):not(.anomaly) path {
+      stroke-dasharray: 1,3;
+    }
+
+    .annotation text {
+      fill: var(--annotation-badge-color);
+    }
+
+    .annotation-note-bg {
+      fill: rgba(0, 0, 0, 0);
+    }
+
+    .annotation-note-title, text.title {
+      font-weight: bold;
+    }
+
+    svg .annotation.rect text {
+      fill: var(--annotation-context-color);
+      font-size: .6em;
+      text-transform: uppercase;
+    }
+
+    svg .annotation.callout.rect path.subject{
+      fill-opacity: .1;
+    }
+
+    svg .annotation.callout.rect path.subject {
+      fill: var(--annotation-context-color);
+      stroke: none;
+      stroke-dasharray: 2, 8;
+    }
+
+    svg .annotation.badge .annotation-subject path{
+        fill: var(--annotation-color);
+        stroke-width: 0px;
+        stroke-dasharray: none;
+    }
+
+    svg .annotation.badge path.subject-pointer {
+        stroke-width: 0px; 
+    }
+
+    svg .annotation.badge text {
+      font-size: .7em;
+    }
+
+    svg text.legend{
+      text-anchor: start;
+      fill: var(--annotation-color)
+    }
+
+    text.title {
+      font-size: 1.2em;
+    }
+
+    </style>
+</head>
+<body>
+    <svg width=960 height=500>
+      <text class="title" x=40 y=50>d3.annotation()</text>
+      <text x=40 y=80>AAPL stock example</text>
+    </svg>
+    <script src="https://d3js.org/d3.v4.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/1.12.1/d3-annotation.min.js"></script>
+    <script>
+
+    const width = 960
+    const height = 500
+    const margin = { top: 120, bottom: 160, left: 50, right: 50}
+    const x = d3.scaleTime().range([margin.left, width - margin.right ])
+          .domain([new Date('12/1/2005'), new Date('1/1/2011') ])
+    const y = d3.scaleLinear().range([height - margin.bottom, margin.top ])
+          .domain([0, 330])
+
+    d3.json("apple.json", function(error, json) {
+      if (error) throw error;
+
+      var line = d3.line()
+        .x(function (d) {return x(new Date (d.Date))})
+        .y(function (d) {return y(d.Close)})
+
+      const svg = d3.select("svg")
+
+      svg.append('g')
+        .attr('class', 'lineChart')
+
+      svg.select("g.lineChart")
+        .datum(json)
+        .append("path")
+        .attr("d", line)
+
+      const yAxis = d3.axisLeft(y).ticks(3).tickFormat(function(d){ return "$" + d})
+      const xAxis = d3.axisBottom(x)
+      svg.append("g")
+        .attr("class", "axis y")
+        .attr("transform", "translate(" + margin.left + ", 0)")
+        .call(yAxis);
+      svg.append("g")
+        .attr("class", "axis x")
+        .attr("transform", "translate(0,"+ (height - margin.bottom) +")")
+        .call(xAxis);
+
+      const annotations = [
+        //moved recession annotation to front of array so it's behind 
+        //the Macbook Air annotation
+        {
+          note: { 
+            title: "Recession GDP -5.1%", 
+            lineType: "none", 
+            align: "middle",
+            wrap: 150 //custom text wrapping
+          },
+          subject: {
+            height: height - margin.top - margin.bottom,
+            width: x(new Date("6/1/2009")) - x(new Date("12/1/2007"))
+          },
+          type: d3.annotationCalloutRect,
+          y: margin.top,
+          disable: ["connector"], // doesn't draw the connector
+          //can pass "subject" "note" and "connector" as valid options
+          dx: (x(new Date("6/1/2009")) - x(new Date("12/1/2007")))/2,
+          data: { x: "12/1/2007"}
+        },
+        {
+          subject: {
+            text: "A",
+            x: "right" //badges have an x of "left" or "right"
+          },
+          data: { x: "1/10/2006", y: 80.9}
+        },
+        {
+          subject: { text: "B" },
+          data: { x: "6/29/2007", y: 122}
+        },
+        {
+          subject: {
+            text: "C",
+            y: "bottom" //badges have a y of "top" or "bottom"
+          },
+          data: { x: "1/29/2008", y: 131.5}
+        },
+        {
+          subject: {
+            text: "D",
+            y: "bottom",
+            x: "right"
+          },
+          data: { x: "4/3/2010", y: 238}
+        }]
+
+      const type = d3.annotationCustomType(
+        d3.annotationBadge, 
+        {"subject":{"radius": 10 }}
+      )
+
+      const makeAnnotations = d3.annotation()
+        .type(type)
+        .accessors({ 
+          x: function(d){ return x(new Date(d.x))},
+          y: function(d){ return y(d.y) }
+        })
+        .annotations(annotations)
+
+      d3.select("svg")
+        .append("g")
+        .attr("class", "annotation-group")
+        .call(makeAnnotations)
+
+
+      //annotations for legend
+      const annotationsLegend = [{
+          note: { label: "MacBook Pro Release" },
+          subject: { text: "A" }
+        },
+        {
+          note: { label: "iPhone Release" },
+          subject: { text: "B" }
+        },
+        {
+          note: { label: "Macbook Air" },
+          subject: { text: "C" }
+        },
+        {
+          note: { label: "iPad Release" },
+          subject: { text: "D" }
+        }
+        ].map(function(d, i){
+          d.x = margin.left + i*200
+          d.y = 415 
+          d.subject.x = "right" 
+          d.subject.y = "bottom" 
+          d.subject.radius = 10
+          return d
+        })
+
+      const makeLegendAnnotations = d3.annotation()
+        .type(d3.annotationBadge)
+        .annotations(annotationsLegend)
+
+      d3.select("svg")
+        .append("g")
+        .attr("class", "annotation-legend")
+        .call(makeLegendAnnotations)
+        
+      d3.select("svg g.annotation-legend")
+        .selectAll('text.legend')
+        .data(annotationsLegend)
+        .enter()
+        .append('text')
+        .attr('class', 'legend')
+        .text(function(d){ return d.note.label })
+        .attr('x', function(d, i){ return margin.left + 30 + i*200 })
+        .attr('y', 430)
+
+    });
+    
+    </script>
+</body>
+</html>
