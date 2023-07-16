@@ -15,7 +15,7 @@ var salesline = d3.line()
     .x(function(d) { return _x(d.Month); })
     .y(function(d) { return _y(d.value); });
 
-var svg = d3.select("svg").attr("width", 960).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+var svg = d3.select(".slide1").attr("width", 960).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 d3.csv("ev_sales.csv", function (error, data) {
   if (error) throw error;
@@ -49,78 +49,6 @@ const colors = {
               return d.color = colors[d.key]; })
           .attr("d", salesline(d.values));
   });
-
-  //Add annotations
-  var hightlight_labels = [ {
-    data: { Month: "Jul-17", value: 7802.00, note:  "Tesla Model 3 Lauched" },
-    dy: 10,
-    dx: 10,
-    subject: {
-      text: 'A'
-    }
-  },{
-    data: { Month: "Jun-22", value: 59151.00, note:  "Highest ever gas price"},
-    dy: 10,
-    dx: 10,
-    subject: {
-    text: 'B'
-    }
-  }].map(function (l) {
-    
-    l.note = Object.assign({}, l.note, { title: l.data.note});
-    l.subject = { radius: 6 };
-
-    return l;
-  });
-  const type = d3.annotationCustomType(
-    d3.annotationCalloutCircle, 
-    {"subject":{"radius": 10 }}
-  )
-  var timeFormat = d3.timeFormat("%b-%y");
-
-  const makeAnnotations = d3.annotation()
-  .annotations(hightlight_labels)
-  .type(type)
-  .accessors({ x: function x(a) {
-      return _x(parseTime(a.Month));
-    }, 
-    y: function y(a) {
-      return _y(a.value);
-    }
-  }).accessorsInverse({
-    date: function date(d) {
-      return timeFormat(_x.invert(d.x));
-    },
-    close: function close(d) {
-      return _y.invert(d.y);
-    }
-  }).on('subjectover', function (annotation) {
-    annotation.type.a.selectAll("g.annotation-connector, g.annotation-note").classed("hidden", false);
-  }).on('subjectout', function (annotation) {
-    annotation.type.a.selectAll("g.annotation-connector, g.annotation-note").classed("hidden", true);
-  })
-  ;
-
-  const annotationsLegend = [{
-    note: { label:  "Tesla Model 3 Lauched on 2017/07/17" },
-    subject: { text: "A" }
-  },
-  {
-    note: { label: "Historically highest gasoline price in 2022/6 " },
-    subject: { text: "B" }
-  },
-  ].map(function(d, i){
-    d.x = margin.left + i*300
-    d.y = 425 
-    d.subject.x = "right" 
-    d.subject.y = "bottom" 
-    d.subject.radius = 10
-    return d
-  })
-
-  const makeLegendAnnotations = d3.annotation()
-  .type(d3.annotationBadge)
-  .annotations(annotationsLegend);
 
   svg.append("g").attr("class", "annotation-group").call(makeAnnotations);
   svg.append("g")
