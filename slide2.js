@@ -69,8 +69,8 @@ d3.csv("gasoline_prices.csv", function (error, data) {
   
       tooltip
         .style("display", "block")
-        .style("left", `${xPos + 100}px`)
-        .style("top", `${yPos + 50}px`)
+        .style("left", `${xPos + margin.left + 100}px`)
+        .style("top", `${yPos + margin.top + 50}px`)
         .html(`<strong>Month:</strong> ${d.Month.toLocaleDateString()}<br><strong>Gas Price:</strong> ${d.price}` )
     });
     // listening rectangle mouse leave function

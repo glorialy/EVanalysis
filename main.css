@@ -60,7 +60,7 @@ rect {
 
   .tooltip {
   position: absolute;
-  padding: 10px;
+  padding: 5px;
   background-color: steelblue;
   color: white;
   border: 1px solid white;
