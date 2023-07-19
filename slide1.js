@@ -42,37 +42,32 @@ const colors = {
       };
 
   // Loop through each symbol / key
+  var div = d3.select("body").append("div")
+     .attr("class", "tooltip-donut")
+     .style("opacity", 0);
+
   dataNest.forEach(function(d) {
       svg.append("path")
           .attr("class", "line")
           .style("stroke", function() { // Add dynamically
               return d.color = colors[d.key]; })
-          .attr("d", salesline(d.values));
+          .attr("d", salesline(d.values))
+          .on("mouseover", function(d) {
+            d3.select(this).style("stroke-width", "2px");
+          })                  
+          .on("mouseout", function(d) {
+            d3.select(this).style("stroke-width", "1px");
+          });
   });
-
-  svg.append("g").attr("class", "annotation-group").call(makeAnnotations);
-  svg.append("g")
-        .attr("class", "annotation-legend")
-        .call(makeLegendAnnotations)
-  svg.selectAll("g.annotation-connector, g.annotation-note").classed("hidden", true);
-  
-  d3.select("svg g.annotation-legend")
-  .selectAll('text.legend')
-  .data(annotationsLegend)
-  .enter()
-  .append('text')
-  .attr('class', 'legend')
-  .text(function(d){ return d.note.label })
-  .attr('x', function(d, i){ return margin.left + 30 + i*300 })
-  .attr('y', 440)
 
 const variableLabel = [
   {variable: "BEV", value: 91699, "note": "Battery EV"},
   {variable: "PHEV", value: 22212, "note": "Plug-in Hybrid EV"},
   {variable: "HEV", value: 95334, 'note': "Hybrid EV"}
 ];
-   
-svg.append("g").selectAll("line")
+
+// Line Mark Notation
+  svg.append("g").selectAll("line")
   .data(variableLabel)
   .enter()
   .append("text")
@@ -82,54 +77,47 @@ svg.append("g").selectAll("line")
   .text(function(d) { return d.note });
 
 
-const tooltip = d3.select("body")
-    .append("div")
-    .attr("class", "tooltip");
+  // // coordinates
+  // var focus = svg.append("g")
+  //   .attr("class", "focus")
+  //   .style("display", "none");
 
-const circle = svg.append("circle")
-    .attr("r", 0)
-    .attr("fill", "steelblue")
-    .style("stroke", "white")
-    .attr("opacity", .70)
-    .style("pointer-events", "none");
-  // create a listening rectangle
+  // focus.append("circle")
+  //   .attr("r", 4.5);
 
-  const listeningRect = svg.append("rect")
-    .attr("width", width)
-    .attr("height", height);
+  // focus.append("text")
+  //   .attr("x", 9)
+  //   .attr("dy", ".35em");
 
-  // create the mouse move function
+  // svg.append("rect")
+  //   .attr("class", "overlay")
+  //   .attr("width", width)
+  //   .attr("height", height)
+  //   .on("mouseover", function() {
+  //     focus.style("display", null);
+  //   })
+  //   .on("mouseout", function(d) {
+  //     focus.style("display", "none");
+  //   })
+  //   .on("mousemove", mousemove);
 
-  listeningRect.on("mousemove", function (event) {
-    const [xCoord] = d3.mouse(this);
-    const bisectDate = d3.bisector(d => d.Month).left;
-    const x0 = gas_x.invert(xCoord);
-    const i = bisectDate(data, x0, 1);
-    const d0 = data[i - 1];
-    const d1 = data[i];
-    const d = x0 - d0.Month > d1.Month - x0 ? d1 : d0;
-    const xPos = _x(d.Month);
-    const yPos = _y(d.price);
+  // function mousemove(d) {
+  //   const bisectDate = d3.bisector(d => d.Month).left;
+  //   var x0 = _x.invert(d3.mouse(this)[0]),
+  //     y0 = _y.invert(d3.mouse(this)[1]),
+  //     i = bisectDate(data, x0, 1),
+  //     d0 = data[i - 1],
+  //     d1 = data[i],
+  //     d2 = data[i + 150],
+  //     d3 = data[i + 300],
+  //     d = (x0 - d0.Month)^2 + (y0 -d1.value)^2 > (d1.Month - x0) ^2 + (y0- d1.value)^2 ? d1 : d0
+  //     d = (x0 - d.Month)^2 + (y0 -d.value)^2 > (d2.Month - x0) ^2 + (y0- d2.value)^2 ? d2 : d,
+  //     d = (x0 - d.Month)^2 + (y0 -d.value)^2 > (d3.Month - x0) ^2 + (y0- d3.value)^2 ? d3 : d
+  //     ;
+  //   console.log(d0,d1,d)
+  //   focus.attr("transform", "translate(" + _x(d.Month) + "," + _y(d.value) + ")");
+  //   focus.select("text").text(d.value);
+  // }
 
-
-    // Update the circle position
-
-    circle.attr("cx", xPos)
-      .attr("cy", yPos);
-
-    // Add transition for the circle radius
-
-    circle.transition()
-      .duration(50)
-      .attr("r", 5);
-
-    // add in  our tooltip
-
-    tooltip
-      .style("display", "block")
-      .style("left", `${xPos + 100}px`)
-      .style("top", `${yPos + 50}px`)
-      .html(`<strong>Month:</strong> ${d.Month.toLocaleDateString()}<br><strong>Gas Price:</strong> ${d.value}` )
-  });
 });
 

@@ -68,3 +68,39 @@ rect {
   display: none;
   opacity: .75;
 }
+.input-container {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  width:100%;
+} 
+ 
+.input-pair {
+  display: inline-block;
+  margin-right: 15px;
+}
+
+/* Set the font size of the labels */
+.input-pair label{
+    display: block;
+    font-size: 1em;
+}
+.text {
+  overflow-wrap: break-word
+}
+#paragraph{
+  width: 300px;
+  margin: 0 auto;
+  text-align: justify;
+} 
+#save{
+  width: 200px;
+  margin: 0 auto;
+  text-align: justify;
+  border: 1px solid lightgrey;
+  padding: 10px;
+}

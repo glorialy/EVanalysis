@@ -36,7 +36,30 @@
     
       <div class="mySlides fade">
         <div class="numbertext">3 / 3</div>
-        <div class="text">Caption Three</div>
+        <svg width=960 height=500 class="slide3">
+          <text class="title" x=110 y=80>How far does $1.00 drive your car?</text>
+          <text x=110 y=100></text>
+        </svg>
+
+        <div class="input-container">
+          <div class = "input-pair">
+            <label for="input1">Local fuel price/gallon ($):</label>
+            <input id="input1" class="input-number" min="1" max="10"  value="4.60"></input>
+          </div>
+          <div class = "input-pair">
+            <label for="input2">Est. MPG of gas vehicle:</label>
+            <input id="input2" class="input-number" min="10" max="50" title="Est. MPG of gas vehicle" aria-label="Est. MPG of gas vehicle" value="24"></input>
+          </div>
+          <div class = "input-pair">
+            <label for="input3">Est. mile/kWh for EV:</label>
+            <input id="input3" class="input-number" min="1" max="10" value="3.07"></input>
+          </div>
+          <div class = "input-pair">
+            <label for="input">Utility kWh rate ($):</label>
+            <input id="input4" class="input-number" min="0" max="5"  value="0.1200"></input>
+          </div>
+        </div>
+        <script src="slide3.js"></script>      
       </div>
     
       <!-- Next and previous buttons -->
