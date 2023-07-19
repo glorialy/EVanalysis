@@ -21,7 +21,7 @@ d3.csv("gasoline_prices.csv", function (error, data) {
   
   svg2.append("path").datum(data) 
       .attr("class", "line")
-      .style("stroke", "#259DCD")
+      .style("stroke", "#FF7F50")
       .attr("d", line);
 
   const tooltip = d3.select("body")

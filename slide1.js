@@ -1,123 +1,206 @@
-"use strict";
-
-// line chart code: https://bl.ocks.org/d3noob/402dd382a51a4f6eea487f9a35566de0
-// time series from: http://bl.ocks.org/mbostock/3883245
-// set the dimensions and margins of the graph
 var margin = { top: 50, right: 50, bottom: 50, left: 80 },
     height = 500 - margin.top - margin.bottom;
 var maxWidth = 860 - margin.left - margin.right;
 var width = 860 - margin.left - margin.right;
 
+// append the svg object to the body of the page
+var svg = d3.select(".slide1")
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
 var parseTime = d3.timeParse("%b-%y");
-var _x = d3.scaleTime().range([0, width]);
-var _y = d3.scaleLinear().range([height, 0]);
-var salesline = d3.line()	
-    .x(function(d) { return _x(d.Month); })
-    .y(function(d) { return _y(d.value); });
 
-var svg = d3.select(".slide1").attr("width", 960).attr("height", height + margin.top + margin.bottom).append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+// Parse the Data
+d3.csv("ev.csv", function(data) {
 
-d3.csv("ev_sales.csv", function (error, data) {
-  if (error) throw error;
-  data.forEach(function(d) {
-		d.Month = parseTime(d.Month);
-		d.value = +parseFloat(d.value);
-    });
-  _x.domain(d3.extent(data, function(d) { return d.Month; }));
-  _y.domain([0, d3.max(data, function(d) { return d.value; })]);
 
-  svg.append("g").attr("class", "x-axis").attr("transform", "translate(0," + height + ")").call(d3.axisBottom(_x));
-  svg.append("g").call(d3.axisLeft(_y));
+  //////////
+  // GENERAL //
+  //////////
+
+  // List of groups = header of the csv files
+  var keys = data.columns.slice(1)
   
-  // Nest the entries by symbol
-  var dataNest = d3.nest()
-      .key(function(d) {return d.variable;})
-      .entries(data);
+  data.forEach(function(d) {
+    d.Month = parseTime(d.Month);
+    });
+  // color palette
+  var color = d3.scaleOrdinal()
+    .domain(keys)
+    .range(d3.schemeCategory10);
 
-const colors = {
-        "BEV": "#F5B041",
-        "HEV": "#CB4335",
-        "PHEV": "#38618c",
-        "Total LDV": "#D32F2F"
+  //stack the data?
+  var stackedData = d3.stack()
+    .order(d3.stackOrderReverse)
+    .keys(keys)
+    (data);
+
+
+  //////////
+  // AXIS //
+  //////////
+
+  // Add X axis
+  var x = d3.scaleTime()
+    .domain(d3.extent(data, function(d) { return d.Month; }))
+    .range([ 0, width ]);
+  var xAxis = svg.append("g")
+    .attr("class", "x-axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x).ticks(5))
+
+  // Add X axis label:
+  svg.append("text")
+      .attr("text-anchor", "end")
+      .attr("x", width)
+      .attr("y", height+40 )
+      .text("Time (Month-Year)");
+
+  // Add Y axis label:
+  svg.append("text")
+      .attr("text-anchor", "end")
+      .attr("x", 0)
+      .attr("y", -20 )
+      .text("# of EV car sold")
+      .attr("text-anchor", "start")
+
+  // Add Y axis
+  var y = d3.scaleLinear()
+    .domain([0, 250000])
+    .range([ height, 0 ]);
+  
+    svg.append("g")
+    .call(d3.axisLeft(y).ticks(5))
+
+
+
+  //////////
+  // BRUSHING AND CHART //
+  //////////
+
+  // Add a clipPath: everything out of this area won't be drawn.
+  var clip = svg.append("defs").append("svg:clipPath")
+      .attr("id", "clip")
+      .append("svg:rect")
+      .attr("width", width )
+      .attr("height", height )
+      .attr("x", 0)
+      .attr("y", 0);
+
+  // Add brushing
+  var brush = d3.brushX()                 // Add the brush feature using the d3.brush function
+      .extent( [ [0,0], [width,height] ] ) // initialise the brush area: start at 0,0 and finishes at width,height: it means I select the whole graph area
+      .on("end", updateChart) // Each time the brush selection changes, trigger the 'updateChart' function
+
+  // Create the scatter variable: where both the circles and the brush take place
+  var areaChart = svg.append('g')
+    .attr("clip-path", "url(#clip)")
+
+  // Area generator
+  var area = d3.area()
+    .x(function(d) { return x(d.data.Month); })
+    .y0(function(d) { return y(d[0]); })
+    .y1(function(d) { return y(d[1]); })
+
+  // Show the areas
+  areaChart
+    .selectAll("mylayers")
+    .data(stackedData)
+    .enter()
+    .append("path")
+      .attr("class", function(d) { console.log(d.key); return "myArea " + d.key })
+      .style("fill", function(d) { return color(d.key); })
+      .attr("d", area)
+
+  // Add the brushing
+  areaChart
+    .append("g")
+      .attr("class", "brush")
+      .call(brush);
+
+  var idleTimeout
+  function idled() { idleTimeout = null; }
+
+  // A function that update the chart for given boundaries
+  function updateChart() {
+
+    extent = d3.event.selection
+
+    // If no selection, back to initial coordinate. Otherwise, update X axis domain
+    if(!extent){
+      if (!idleTimeout) return idleTimeout = setTimeout(idled, 350); // This allows to wait a little bit
+      x.domain(d3.extent(data, function(d) { return d.Month; }))
+    }else{
+      x.domain([ x.invert(extent[0]), x.invert(extent[1]) ])
+      areaChart.select(".brush").call(brush.move, null) // This remove the grey brush area as soon as the selection has been done
+    }
+
+    // Update axis and area position
+    xAxis.transition().duration(1000).call(d3.axisBottom(x).ticks(5))
+    areaChart
+      .selectAll("path")
+      .transition().duration(1000)
+      .attr("d", area)
+    }
+
+
+
+    //////////
+    // HIGHLIGHT GROUP //
+    //////////
+
+    // What to do when one group is hovered
+    var highlight = function(d){
+      console.log(d)
+      // reduce opacity of all groups
+      d3.selectAll(".myArea").style("opacity", .1)
+      // expect the one that is hovered
+      d3.select("."+d).style("opacity", 1)
+    }
+
+    // And when it is not hovered anymore
+    var noHighlight = function(d){
+      d3.selectAll(".myArea").style("opacity", 1)
+    }
+
+
+
+    //////////
+    // LEGEND //
+    //////////
+
+    // Add one dot in the legend for each name.
+    var size = 20
+    svg.selectAll("myrect")
+      .data(keys)
+      .enter()
+      .append("rect")
+        .attr("x", maxWidth)
+        .attr("y", function(d,i){ return 10 + i*(size+5)}) // 100 is where the first dot appears. 25 is the distance between dots
+        .attr("width", size)
+        .attr("height", size)
+        .style("fill", function(d){ return color(d)})
+        .on("mouseover", highlight)
+        .on("mouseleave", noHighlight)
+
+    // Add one dot in the legend for each name.
+    const variableLabel = {
+        "BEV":  "Battery EV",
+        "PHEV": "Plug-in Hybrid EV",
+        "HEV":  "Hybrid EV"
       };
 
-  // Loop through each symbol / key
-  var div = d3.select("body").append("div")
-     .attr("class", "tooltip-donut")
-     .style("opacity", 0);
+    svg.selectAll("mylabels")
+      .data(keys)
+      .enter()
+      .append("text")
+        .attr("x", maxWidth + size*1.2)
+        .attr("y", function(d,i){ return 10 + i*(size+5) + (size/2)}) // 100 is where the first dot appears. 25 is the distance between dots
+        .style("fill", function(d){ return color(d)})
+        .text(function(d){ return variableLabel[d]})
+        .attr("text-anchor", "left")
+        .style("alignment-baseline", "middle")
+        .on("mouseover", highlight)
+        .on("mouseleave", noHighlight)
 
-  dataNest.forEach(function(d) {
-      svg.append("path")
-          .attr("class", "line")
-          .style("stroke", function() { // Add dynamically
-              return d.color = colors[d.key]; })
-          .attr("d", salesline(d.values))
-          .on("mouseover", function(d) {
-            d3.select(this).style("stroke-width", "2px");
-          })                  
-          .on("mouseout", function(d) {
-            d3.select(this).style("stroke-width", "1px");
-          });
-  });
-
-const variableLabel = [
-  {variable: "BEV", value: 91699, "note": "Battery EV"},
-  {variable: "PHEV", value: 22212, "note": "Plug-in Hybrid EV"},
-  {variable: "HEV", value: 95334, 'note': "Hybrid EV"}
-];
-
-// Line Mark Notation
-  svg.append("g").selectAll("line")
-  .data(variableLabel)
-  .enter()
-  .append("text")
-  .attr("x", function(d) { return maxWidth })
-  .attr("y", function(d) { return _y(d.value) })
-  .attr("fill", function(d) {return colors[d.variable];})
-  .text(function(d) { return d.note });
-
-
-  // // coordinates
-  // var focus = svg.append("g")
-  //   .attr("class", "focus")
-  //   .style("display", "none");
-
-  // focus.append("circle")
-  //   .attr("r", 4.5);
-
-  // focus.append("text")
-  //   .attr("x", 9)
-  //   .attr("dy", ".35em");
-
-  // svg.append("rect")
-  //   .attr("class", "overlay")
-  //   .attr("width", width)
-  //   .attr("height", height)
-  //   .on("mouseover", function() {
-  //     focus.style("display", null);
-  //   })
-  //   .on("mouseout", function(d) {
-  //     focus.style("display", "none");
-  //   })
-  //   .on("mousemove", mousemove);
-
-  // function mousemove(d) {
-  //   const bisectDate = d3.bisector(d => d.Month).left;
-  //   var x0 = _x.invert(d3.mouse(this)[0]),
-  //     y0 = _y.invert(d3.mouse(this)[1]),
-  //     i = bisectDate(data, x0, 1),
-  //     d0 = data[i - 1],
-  //     d1 = data[i],
-  //     d2 = data[i + 150],
-  //     d3 = data[i + 300],
-  //     d = (x0 - d0.Month)^2 + (y0 -d1.value)^2 > (d1.Month - x0) ^2 + (y0- d1.value)^2 ? d1 : d0
-  //     d = (x0 - d.Month)^2 + (y0 -d.value)^2 > (d2.Month - x0) ^2 + (y0- d2.value)^2 ? d2 : d,
-  //     d = (x0 - d.Month)^2 + (y0 -d.value)^2 > (d3.Month - x0) ^2 + (y0- d3.value)^2 ? d3 : d
-  //     ;
-  //   console.log(d0,d1,d)
-  //   focus.attr("transform", "translate(" + _x(d.Month) + "," + _y(d.value) + ")");
-  //   focus.select("text").text(d.value);
-  // }
-
-});
-
+})
