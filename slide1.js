@@ -35,9 +35,9 @@ d3.csv("ev_sales.csv", function (error, data) {
       .entries(data);
 
 const colors = {
-        "BEV": "#00BCD4",
-        "HEV": "#ffc107",
-        "PHEV": "#0097a7",
+        "BEV": "#F5B041",
+        "HEV": "#CB4335",
+        "PHEV": "#38618c",
         "Total LDV": "#D32F2F"
       };
 
